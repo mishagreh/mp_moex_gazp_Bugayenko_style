@@ -9,8 +9,16 @@ from DrawnProfileToImagesClass import DrawnProfileToImages
 from config import LETTERS, TICKER, DAY_NUMBER
 from db_create_connection import *
 from DraggableCanvasClass import DraggableCanvas
-from MoexResponsesClass import MoexResponses
+from MoexResponsesClass import MoexResponses, TenMinuteResponse, OneMinuteResponse, TrimmedResponsesList
 from HalfHourIntervalsClass import HalfHourIntervals
+from RawResponsesClass import RawResponses
+from TrimmedResponsesClass import TrimmedResponses
+from ResponsesCandlesDataClass import ResponsesCandlesData
+from HalfHourIntervalsNoRoundingClass import HalfHourIntervalsNoRounding
+from HalfHourIntervalsWithRoundingClass import HalfHourIntervalsWithRounding
+from DrawnProfileNakedClass import DrawnProfileNaked
+from DrawnProfileToImagesUpdatedClass import DrawnProfileToImagesUpdated
+from OverallPriceColumnClass import OverallPriceColumn
 
 
 def get_dates() -> tuple:
@@ -47,49 +55,53 @@ def main(win) -> None:
 
     for day in days:
 
-        date = day[5:7], day[8:10]
+        date = month, day = day[5:7], day[8:10]
+        # date = month, day = '07', '04'
+        ticker = TICKER
 
-        try:
+        # create http requests (10-minute and 1-minute) object as a tuple
+        responses_endpoints = f'https://iss.moex.com/iss/engines/stock/markets/shares/securities/{ticker}/' \
+                              f'candles.json?from=2024-{month}-{day}&till=2024-{month}-{day}&interval=10', \
+            f'https://iss.moex.com/iss/engines/stock/markets/shares/securities/{ticker}/candles.json?' \
+            f'from=2024-{month}-{day}&till=2024-{month}-{day}&interval=1&iss.reverse=true'
 
-            moex_responses = MoexResponses(*date, TICKER)
-            mp_intervals = HalfHourIntervals(moex_responses).mp_intervals
+        # create http response object
+        raw_responses = RawResponses(responses_endpoints)
 
-            letters = LETTERS[:len(mp_intervals)]  # Shortens LETTERS according to the input time periods.
+        # create http response object without redundant technical details
+        responses_candles_data = ResponsesCandlesData(raw_responses)
 
-            profile = DrawnProfile(mp_intervals, TICKER, letters)
+        if responses_candles_data != ([], []):
 
-            # building profile
-            profile.build_unfolded_and_collapsed_mp_without_center_and_poc()
+            # create http response without redundant candles data
+            trimmed_responses = TrimmedResponses(responses_candles_data)
 
-            profile.mark_mp_center()
-            profile.mark_mp_opening_and_closing()
-            profile.mark_mp_poc()
+            # create half-hour intervals object with NO price rounding
+            mp_intervals_no_rounding = HalfHourIntervalsNoRounding(trimmed_responses)
 
-            # write daily profile as a string to daily profiles db
+            # create half-hour intervals object with rounded prices
+            mp_intervals_with_rounding = HalfHourIntervalsWithRounding(mp_intervals_no_rounding)
 
-            profile_to_images = DrawnProfileToImages()
-            profile_to_images.write_daily_profile_to_db(
-                TICKER,
-                profile_to_images.convert_list_to_string(profile.market_profile),
-                mp_intervals)
+            letters = LETTERS[:len(mp_intervals_with_rounding)]  # Shortens LETTERS according to the input time periods.
 
-            # create daily profile images and writing them to db
+            # build profile object and put its string representation into DB
+            profile_naked = DrawnProfileNaked(mp_intervals_with_rounding, letters, TICKER)
 
-            final_images = profile_to_images.create_images(profile_to_images.build_history_mp()[1])
-            profile_to_images.write_final_images_to_db(final_images)
+            # create images-for-a-profile object and put the references into DB
+            profile_to_images = DrawnProfileToImagesUpdated()
 
-        except IndexError:
-            pass
+        else:
+            break
 
-    profile_to_images = DrawnProfileToImages()
-    overall_mp_and_price_column = profile_to_images.build_history_mp()
+    # create price column object for n days (n is from config file)
+    overall_mp_and_price_column = OverallPriceColumn()
 
     canvas2 = DraggableCanvas(
         win,
         overall_mp_and_price_column,
         bg='#203039',
         width=360 * (DAY_NUMBER+2),
-        height=15 * len(overall_mp_and_price_column[0]),
+        height=15 * len(overall_mp_and_price_column),
     )
     canvas2.pack(side='left', anchor='nw', fill='y')
 

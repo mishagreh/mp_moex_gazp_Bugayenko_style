@@ -43,10 +43,10 @@ class DraggableCanvas(tk.Canvas):
     def __init__(self, master, arg1, **kwargs):
         super().__init__(master, **kwargs)
         self.day_canvases_list = []  # a list of daily canvases within draggable canvas
-        self.canvas_height = 15*len(arg1[0])  # initial value for all the internal daily canvases
+        self.canvas_height = 15*len(arg1)  # initial value for all the internal daily canvases
         self.int_canvas = None  # initial container (frame) for all the daily canvases
-        self.canvas_maxprice = arg1[0][0]
-        self.canvas_minprice = arg1[0][-1]
+        self.canvas_maxprice = arg1[0]
+        self.canvas_minprice = arg1[-1]
         self.profile_images_from_db = self.__get_profile_images_from_db()
         self.start_pos = 0, 0
         self.__add_internal_canvas()

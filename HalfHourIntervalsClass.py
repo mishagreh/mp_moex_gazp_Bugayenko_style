@@ -4,7 +4,7 @@ import math
 class HalfHourIntervals:
 
     def __init__(self, moex_responses):
-        self.moex_responses = moex_responses.trimmed_responses
+        self.moex_responses = moex_responses
         self.mp_intervals = self.__build_mp_intervals(*self.moex_responses)
 
     @staticmethod
