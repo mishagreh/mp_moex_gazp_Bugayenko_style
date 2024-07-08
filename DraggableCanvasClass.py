@@ -16,8 +16,7 @@ class StatefulCanvas(tk.Canvas):
 
 class DraggableCanvas(tk.Canvas):
 
-    @staticmethod
-    def __get_profile_images_from_db() -> list:
+    def __get_profile_images_from_db(self) -> None:
         """
         Retrieves current day profile images names from DB. Plus converts the files into tk.PhotoImage objects.
         """
@@ -26,31 +25,32 @@ class DraggableCanvas(tk.Canvas):
             read_query = f"SELECT * FROM gazp_profile_images ORDER BY date DESC LIMIT {n}"
             profile_images_from_db = execute_read_query(connection, read_query)[::-1]
 
-        profile_images_from_db = [list(i) for i in profile_images_from_db]
-        for i in profile_images_from_db:
+        self.__profile_images_from_db = [list(i) for i in profile_images_from_db]
+        for i in self.__profile_images_from_db:
             i[1] = tk.PhotoImage(file=f'C:/mp/mp_images/{i[1]}')
             i[2] = tk.PhotoImage(file=f'C:/mp/mp_images/{i[2]}')
 
         # additional data for current day empty canvas
-        profile_images_from_db.append(['today',
-                                       tk.PhotoImage(file='images15pxls\\image_ .png'),
-                                       tk.PhotoImage(file='images15pxls\\image_ .png'),
-                                       '0',
-                                       '0'])
+        self.__profile_images_from_db.append(['today',
+                                              tk.PhotoImage(file='images15pxls\\image_ .png'),
+                                              tk.PhotoImage(file='images15pxls\\image_ .png'),
+                                              '0',
+                                              '0'])
 
-        return profile_images_from_db
+        return
 
-    def __init__(self, master, arg1, **kwargs):
+    def __init__(self, master, overall_price_column, **kwargs):
         super().__init__(master, **kwargs)
         self.day_canvases_list = []  # a list of daily canvases within draggable canvas
-        self.canvas_height = 15*len(arg1)  # initial value for all the internal daily canvases
+        self.canvas_height = 15*len(overall_price_column)  # initial value for all the internal daily canvases
         self.int_canvas = None  # initial container (frame) for all the daily canvases
-        self.canvas_maxprice = arg1[0]
-        self.canvas_minprice = arg1[-1]
-        self.profile_images_from_db = self.__get_profile_images_from_db()
-        self.start_pos = 0, 0
+        self.canvas_maxprice = overall_price_column[0]
+        self.canvas_minprice = overall_price_column[-1]
+        self.__profile_images_from_db = None
+        self.__get_profile_images_from_db()
+        self.__start_pos = 0, 0
         self.__add_internal_canvas()
-        self.current_widget = None  # when hovering a mouse over an exact canvas (for events)
+        self.__current_widget = None  # when hovering a mouse over an exact canvas (for events)
 
     def __on_drag_start(self, event) -> None:
         """
@@ -58,7 +58,7 @@ class DraggableCanvas(tk.Canvas):
         """
         eventx = event.x_root-self.bbox("canv")[0] + self.winfo_rootx()
         eventy = event.y_root-self.bbox("canv")[1] + self.winfo_rooty()
-        self.start_pos = eventx, eventy
+        self.__start_pos = eventx, eventy
 
         return
 
@@ -67,8 +67,8 @@ class DraggableCanvas(tk.Canvas):
         Calculates coordinate's deltas when dragging a canvas and moves it.
         """
 
-        dx = event.x_root + self.winfo_rootx()-self.start_pos[0]
-        dy = event.y_root + self.winfo_rooty()-self.start_pos[1]
+        dx = event.x_root + self.winfo_rootx()-self.__start_pos[0]
+        dy = event.y_root + self.winfo_rooty()-self.__start_pos[1]
 
         # The max(..., 0) claps it down so that it can't go off of the screen
         # upper left and lower right
@@ -90,9 +90,9 @@ class DraggableCanvas(tk.Canvas):
 
             day_canvas = StatefulCanvas(
                 day_frame,
-                self.profile_images_from_db[i][1],
-                self.profile_images_from_db[i][2],
-                self.profile_images_from_db[i][3],
+                self.__profile_images_from_db[i][1],
+                self.__profile_images_from_db[i][2],
+                self.__profile_images_from_db[i][3],
                 width=360, height=self.canvas_height, bg=f'{background_colors[0] if i%2 else background_colors[1]}',
                 bd=0, highlightthickness=0, relief='ridge')
             day_canvas.pack(anchor='nw', fill='y')
@@ -123,7 +123,7 @@ class DraggableCanvas(tk.Canvas):
         """
         Defines a widget when hovering with a mouse cursor over an exact canvas.
         """
-        self.current_widget = event.widget
+        self.__current_widget = event.widget
         event.widget.focus_set()
         return
 

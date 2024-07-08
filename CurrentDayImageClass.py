@@ -2,14 +2,16 @@ from db_create_connection import *
 from PIL import Image
 
 
-class CurrentDayImage:
+class CurrentDayImage(list):
 
     def __init__(self):
-        self.__divided_profile = self.__divide_profile()
-        self.__create_images(self.__divided_profile)
+        super().__init__([[], []])
+        # self.__divided_profile = self.__divide_profile()
+        self.__divide_profile()
+        self.__create_images()
 
-    @staticmethod
-    def __divide_profile() -> list:
+    # @staticmethod
+    def __divide_profile(self):
         """
         Divides a composite (unfolded + collapsed) profile into to separate profiles.
         """
@@ -20,15 +22,18 @@ class CurrentDayImage:
         current_day_profile = [i.split(',') for i in current_day_profile[0][0].split('\n')]
 
         # split overall profile into unfolded and collapsed profiles
-        divided_profile = [[], []]
+        # divided_profile = [[], []]
+        # self = [[], []]
         # x - the number of columns in each profile
         x = int((len(current_day_profile[0]) - 1)/2) + 1
         for i in current_day_profile:
-            divided_profile[0].append(i[:x])
-            divided_profile[1].append(i[x:])
+            # divided_profile[0].append(i[:x])
+            self[0].append(i[:x])
+            # divided_profile[1].append(i[x:])
+            self[1].append(i[x:])
 
         # returning prices for n days, but just one day to store in the db
-        return divided_profile
+        return  # divided_profile
 
     @staticmethod
     def __write_current_day_images_to_db(final_images: tuple) -> None:
@@ -48,7 +53,7 @@ class CurrentDayImage:
             execute_query(connection, write_query, data_tuple)
         return
 
-    def __create_images(self, divided_profile: list) -> tuple:
+    def __create_images(self) -> tuple:
         """ Receives merged and unfolded profiles. And creates aggregated profile images.
         :param divided_profile: unfolded and collapsed profiles as a list of lists
         """
@@ -56,7 +61,7 @@ class CurrentDayImage:
         number = 0
         suffixes = ("unfolded", "collapsed")
 
-        for j, i in enumerate(divided_profile):
+        for j, i in enumerate(self):
 
             width_pxls = len(i[0])*15 if j == 1 else (len(i[0]) - 1)*15
             height_pxls = len(i)*15
@@ -73,7 +78,7 @@ class CurrentDayImage:
 
             number += 1
         final_images = \
-            "unfolded_image.png", "collapsed_image.png", divided_profile[0][0][0], divided_profile[0][-1][0]
+            "unfolded_image.png", "collapsed_image.png", self[0][0][0], self[0][-1][0]
 
         self.__write_current_day_images_to_db(final_images)
 

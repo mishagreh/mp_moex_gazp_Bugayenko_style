@@ -1,6 +1,3 @@
-import math
-
-
 class HalfHourIntervalsNoRounding(list):
 
     def __init__(self, responses):

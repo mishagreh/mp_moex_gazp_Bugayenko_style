@@ -5,7 +5,7 @@ from PIL import Image
 class DrawnProfileToImagesUpdated:
 
     def __init__(self):
-        self.overall_mp_and_price_column = None  # updates with __build_history_mp()[0] on the next line
+        self.overall_mp_and_price_column = None  # is updated with __build_history_mp()[0] on the next line
         self.__divided_overall_mp = self.__build_history_mp()[1]
         self.__final_images = self.__create_images()
         self.__write_final_images_to_db()

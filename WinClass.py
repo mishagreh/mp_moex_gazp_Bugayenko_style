@@ -2,10 +2,13 @@ import tkinter as tk
 import time
 
 from config import LETTERS
-from HalfHourIntervalsClass import HalfHourIntervals
-from MoexResponsesClass import MoexResponses
-from DrawnProfilePy import DrawnProfile
 from CurrentDayImageClass import CurrentDayImage
+from DrawnProfileTodayClass import DrawnProfileToday
+from RawResponsesClass import RawResponses
+from ResponsesCandlesDataClass import ResponsesCandlesData
+from TrimmedResponsesClass import TrimmedResponses
+from HalfHourIntervalsNoRoundingClass import HalfHourIntervalsNoRounding
+from HalfHourIntervalsWithRoundingClass import HalfHourIntervalsWithRounding
 from datetime import date as d
 from concurrent import futures
 from db_create_connection import *
@@ -14,31 +17,7 @@ from config import TICKER
 ticker = TICKER
 
 
-def convert_list_to_string(market_profile_as_list: list) -> str:
-    """
-    Creates a market profile string representation ready for csv file.
-    """
-    return '\n'.join([','.join(i) for i in market_profile_as_list])
-
-
-def write_current_day_profile_to_db(ticker: str, market_profile_str: str, mp_intervals: list) -> None:
-    """
-    Extracts date from mp_intervals and writes it with current day profile as a string to DB.
-    :param ticker: GAZP and so on
-    :param market_profile_str:
-    :param mp_intervals: provides date
-    """
-    profile_date = mp_intervals[0][4][:10]
-
-    with create_connection('C:/mp/mp_db.sqlite') as connection:
-        delete_all_rows_query = "DELETE FROM current_day_profile"
-        write_query = f"INSERT INTO current_day_profile (ticker, date, profile) VALUES (?, ?, ?)"
-        write_data_tuple = ticker, profile_date, market_profile_str
-        execute_delete_query(connection, delete_all_rows_query)
-        execute_query(connection, write_query, write_data_tuple)
-
-
-# creates thread_pool_executor instance for the On/off checkbutton to be working in parallel with the other tasks and
+# create thread_pool_executor instance for the On/off checkbutton to be working in parallel with the other tasks and
 # limits the number of extra threads
 thread_pool_executor = futures.ThreadPoolExecutor(max_workers=1)
 
@@ -67,29 +46,37 @@ class Win(tk.Canvas):
         current day profile images, stores it in the DB, puts the current day profile of the history canvas according
         to its proper positioning.
         """
-        date = str(d.today())[5:7], str(d.today())[8:10]
+        date = month, day = str(d.today())[5:7], str(d.today())[8:10]
 
         while self.enabled.get() == 1:
 
-            moex_responses = MoexResponses(*date, TICKER)
-            mp_intervals = HalfHourIntervals(moex_responses).mp_intervals
+            # create http requests (10-minute and 1-minute) object as a tuple
+            responses_endpoints = f'https://iss.moex.com/iss/engines/stock/markets/shares/securities/{ticker}/' \
+                                  f'candles.json?from=2024-{month}-{day}&till=2024-{month}-{day}&interval=10', \
+                f'https://iss.moex.com/iss/engines/stock/markets/shares/securities/{ticker}/candles.json?' \
+                f'from=2024-{month}-{day}&till=2024-{month}-{day}&interval=1&iss.reverse=true'
 
-            letters = LETTERS[:len(mp_intervals)]  # Shortens LETTERS according to the input time periods.
+            # create http current day responses object
+            raw_responses = RawResponses(responses_endpoints)
 
-            profile = DrawnProfile(mp_intervals, ticker, letters)
+            # create http current day responses object without redundant technical details
+            responses_candles_data = ResponsesCandlesData(raw_responses)
 
-            # building profile
-            profile.build_unfolded_and_collapsed_mp_without_center_and_poc()
+            # create http current day responses without redundant candles data
+            trimmed_responses = TrimmedResponses(responses_candles_data)
 
-            profile.mark_mp_center()
-            profile.mark_mp_opening_and_closing()
-            profile.mark_mp_poc()
+            # create half-hour current day intervals object with NO price rounding
+            mp_intervals_no_rounding = HalfHourIntervalsNoRounding(trimmed_responses)
 
-            # write daily profile as a string to daily profiles db
-            market_profile_str = convert_list_to_string(profile.market_profile)
-            write_current_day_profile_to_db(ticker, market_profile_str, mp_intervals)
+            # create half-hour current day intervals object with rounded prices
+            mp_intervals_with_rounding = HalfHourIntervalsWithRounding(mp_intervals_no_rounding)
 
-            # reading profile as a string from db, creates images, putting image references into db
+            letters = LETTERS[:len(mp_intervals_with_rounding)]  # Shortens LETTERS according to the input time periods.
+
+            # build current day profile object and put its string representation into DB
+            profile_today = DrawnProfileToday(mp_intervals_with_rounding, letters, TICKER)
+
+            # create "current day profile images and put the references into DB" object
             z = CurrentDayImage()
 
             with create_connection('C:/mp/mp_db.sqlite') as connection:

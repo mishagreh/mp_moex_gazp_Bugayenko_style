@@ -3,20 +3,16 @@ import tkinter as tk
 from datetime import date as d
 from datetime import datetime
 from datetime import timedelta
-from DrawnProfilePy import DrawnProfile
 from WinClass import Win
-from DrawnProfileToImagesClass import DrawnProfileToImages
 from config import LETTERS, TICKER, DAY_NUMBER
 from db_create_connection import *
 from DraggableCanvasClass import DraggableCanvas
-from MoexResponsesClass import MoexResponses, TenMinuteResponse, OneMinuteResponse, TrimmedResponsesList
-from HalfHourIntervalsClass import HalfHourIntervals
 from RawResponsesClass import RawResponses
 from TrimmedResponsesClass import TrimmedResponses
 from ResponsesCandlesDataClass import ResponsesCandlesData
 from HalfHourIntervalsNoRoundingClass import HalfHourIntervalsNoRounding
 from HalfHourIntervalsWithRoundingClass import HalfHourIntervalsWithRounding
-from DrawnProfileNakedClass import DrawnProfileNaked
+from DrawnProfileHistoryClass import DrawnProfileHistory
 from DrawnProfileToImagesUpdatedClass import DrawnProfileToImagesUpdated
 from OverallPriceColumnClass import OverallPriceColumn
 
@@ -46,8 +42,7 @@ def get_dates() -> tuple:
 def main(win) -> None:
     """ Invokes all the other funcs. """
 
-    last_day_in_db = get_dates()[0]
-    current_day = get_dates()[1]
+    last_day_in_db, current_day = get_dates()
     days = []
     while (current_day - last_day_in_db) != timedelta(1):
         days.append(str(last_day_in_db + timedelta(days=1))[:10])
@@ -85,23 +80,23 @@ def main(win) -> None:
             letters = LETTERS[:len(mp_intervals_with_rounding)]  # Shortens LETTERS according to the input time periods.
 
             # build profile object and put its string representation into DB
-            profile_naked = DrawnProfileNaked(mp_intervals_with_rounding, letters, TICKER)
+            profile_history = DrawnProfileHistory(mp_intervals_with_rounding, letters, TICKER)
 
             # create images-for-a-profile object and put the references into DB
             profile_to_images = DrawnProfileToImagesUpdated()
 
         else:
-            break
+            pass
 
     # create price column object for n days (n is from config file)
-    overall_mp_and_price_column = OverallPriceColumn()
+    overall_price_column = OverallPriceColumn()
 
     canvas2 = DraggableCanvas(
         win,
-        overall_mp_and_price_column,
+        overall_price_column,
         bg='#203039',
         width=360 * (DAY_NUMBER+2),
-        height=15 * len(overall_mp_and_price_column),
+        height=15 * len(overall_price_column),
     )
     canvas2.pack(side='left', anchor='nw', fill='y')
 
