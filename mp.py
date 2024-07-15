@@ -50,8 +50,7 @@ def main(win) -> None:
 
     for day in days:
 
-        date = month, day = day[5:7], day[8:10]
-        # date = month, day = '07', '04'
+        month, day = day[5:7], day[8:10]
         ticker = TICKER
 
         # create http requests (10-minute and 1-minute) object as a tuple

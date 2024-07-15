@@ -98,7 +98,8 @@ class DraggableCanvas(tk.Canvas):
             day_canvas.pack(anchor='nw', fill='y')
 
             day_canvas.image_y_coord = \
-                15*int((100*float(self.canvas_maxprice)-100*float(day_canvas.profile_image_maxprice))/5)
+                15*int((int(self.canvas_maxprice.replace('.', '')) -
+                        int(day_canvas.profile_image_maxprice.replace('.', '')))/5)
 
             day_canvas.create_image(
                 0, day_canvas.image_y_coord, image=day_canvas.collapsed_profile_image, anchor='nw',
@@ -106,7 +107,7 @@ class DraggableCanvas(tk.Canvas):
 
             # events' bindings
             day_canvas.bind('<Enter>', self.__define_widget)  # when mouse cursor enters a widget
-            day_canvas.bind('<space>', lambda event: self.__collapse_unfold(event))
+            day_canvas.bind('<space>', self.__collapse_unfold)
             day_canvas.bind('<Button>', self.__on_drag_start)
             day_canvas.bind('<B1-Motion>', self.__on_drag_motion)
             day_canvas.bind('<Motion>', self.__horizontal_line)

@@ -6,11 +6,9 @@ class CurrentDayImage(list):
 
     def __init__(self):
         super().__init__([[], []])
-        # self.__divided_profile = self.__divide_profile()
         self.__divide_profile()
-        self.__create_images()
+        self.__write_current_day_images_to_db(self.__create_images())
 
-    # @staticmethod
     def __divide_profile(self):
         """
         Divides a composite (unfolded + collapsed) profile into to separate profiles.
@@ -33,7 +31,7 @@ class CurrentDayImage(list):
             self[1].append(i[x:])
 
         # returning prices for n days, but just one day to store in the db
-        return  # divided_profile
+        return
 
     @staticmethod
     def __write_current_day_images_to_db(final_images: tuple) -> None:
@@ -54,9 +52,7 @@ class CurrentDayImage(list):
         return
 
     def __create_images(self) -> tuple:
-        """ Receives merged and unfolded profiles. And creates aggregated profile images.
-        :param divided_profile: unfolded and collapsed profiles as a list of lists
-        """
+        """ Receives merged and unfolded profiles. And creates aggregated profile images."""
 
         number = 0
         suffixes = ("unfolded", "collapsed")
@@ -79,7 +75,5 @@ class CurrentDayImage(list):
             number += 1
         final_images = \
             "unfolded_image.png", "collapsed_image.png", self[0][0][0], self[0][-1][0]
-
-        self.__write_current_day_images_to_db(final_images)
 
         return final_images

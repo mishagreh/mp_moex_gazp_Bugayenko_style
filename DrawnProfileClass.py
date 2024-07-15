@@ -1,8 +1,60 @@
-# Base class
+# Abstract base class DrawnProfile for DrawnProfileHistory and DrawnProfileToday
+# and a couple of extra helper classes made of static methods
 
 import math
 
 from config import LETTERS
+
+
+class IntervalCenterPrice(tuple):
+
+    def __new__(cls, max_price, min_price):
+        return cls.__find_center_price(max_price, min_price)
+
+    @classmethod
+    def __find_center_price(cls, max_price, min_price):
+        """
+        Finds the center of a profile and returns a tuple of whether 2 different prices
+        (double center) or 2 equal prices (single center).
+        """
+
+        day_range = max_price - min_price + 5
+        day_range_steps = day_range / 5
+        halfback_steps = day_range_steps / 2
+        if (halfback_steps - int(halfback_steps)) == 0:
+            return f'{(max_price - halfback_steps * 5) / 100:.2f}', \
+                f'{(min_price + halfback_steps * 5) / 100:.2f}'
+        return f'{(max_price - math.ceil(halfback_steps) * 5 + 5) / 100:.2f}', \
+            f'{(max_price - math.ceil(halfback_steps) * 5 + 5) / 100:.2f}'
+
+
+class Poc(list):
+
+    def __init__(self, poc_candidates, profile_center):
+        super().__init__()
+        self.__choose_poc(poc_candidates, profile_center)
+
+    def __choose_poc(self, poc_candidates, profile_center):
+        """
+        Chooses POC price closest to the profile center out of the several longest TPO count candidates.
+
+        :param profile_center: A tuple of the profile center prices (single or double center)
+        :param poc_candidates: a list of tuples (final row index, exact price, TPO count) of POC candidates
+        :return: A list of exact final POC prices
+        """
+
+        delta = []  # A list of differences in price between each POC candidate and profile center price
+        delta_price = []  # A list of appropriate prices for each POC candidate delta
+        for i in poc_candidates:
+            delta.append(abs(float(i[1]) * 100 - float(profile_center) * 100) / 100)
+            delta_price.append(i[1])
+
+        # Self is a list of exact final POC prices (length is 1 or 2)
+        for i in zip(delta, delta_price):
+            if i[0] == min(delta):
+                self.append(i[1])
+
+        return
 
 
 class DrawnProfile:
@@ -30,26 +82,6 @@ class DrawnProfile:
         mp_price_column = [f'{i / 100:.2f}' for i in mp_price_column]
         return mp_price_column
 
-    @staticmethod
-    def __find_mp_center_price(day_high, day_low):
-        """
-        Finds the center of a profile and returns a tuple of whether 2 different prices
-        (double center) or 2 equal prices (single center).
-
-        :param day_high: The highest price of the day
-        :param day_low: The lowest price of the day
-        :return: a tuple of whether 2 different prices (double center) or 2 equal prices (single center)
-        """
-
-        day_range = day_high - day_low + 5
-        day_range_steps = day_range / 5
-        halfback_steps = day_range_steps / 2
-        if (halfback_steps - int(halfback_steps)) == 0:
-            return f'{(day_high - halfback_steps * 5) / 100:.2f}', \
-                f'{(day_low + halfback_steps * 5) / 100:.2f}'
-        return f'{(day_high - math.ceil(halfback_steps) * 5 + 5) / 100:.2f}', \
-            f'{(day_high - math.ceil(halfback_steps) * 5 + 5) / 100:.2f}'
-
     def __init__(self, mp_intervals, letters, ticker):
         """
         Initializer
@@ -62,36 +94,13 @@ class DrawnProfile:
         self.__letters = letters
         self.__day_high, self.__day_low = self.__find_day_high_and_low_prices()
         self.__mp_price_column = self.__form_mp_price_column()
-        self.__profile_center = self.__find_mp_center_price(self.__day_high, self.__day_low)
+        self.__profile_center = IntervalCenterPrice(self.__day_high, self.__day_low)
         self.__market_profile = None
         self.__build_unfolded_and_collapsed_mp_without_center_and_poc()
         self.__mark_mp_center()
         self.__mark_mp_opening_and_closing()
         self.__mark_mp_poc()
         self.market_profile_as_string = self.__convert_list_to_string()
-
-    @staticmethod
-    def __choose_poc(poc_candidates: list, profile_center: str) -> list:
-        """
-        Chooses POC price closest to the profile center out of the several longest TPO count candidates.
-
-        :param profile_center: A tuple of the profile center prices (single or double center)
-        :param poc_candidates: a list of tuples (final row index, exact price, TPO count) of POC candidates
-        :return: A list of exact final POC prices
-        """
-
-        delta = []  # A list of differences in price between each POC candidate and profile center price
-        delta_price = []  # A list of appropriate prices for each POC candidate delta
-        for i in poc_candidates:
-            delta.append(abs(float(i[1]) * 100 - float(profile_center) * 100) / 100)
-            delta_price.append(i[1])
-
-        poc = []  # A list of exact final POC prices (length is 1 or 2)
-        for i in zip(delta, delta_price):
-            if i[0] == min(delta):
-                poc.append(i[1])
-
-        return poc
 
     def __build_unfolded_and_collapsed_mp_without_center_and_poc(self) -> None:
         """
@@ -105,8 +114,12 @@ class DrawnProfile:
             market_profile_row = [i, ' ', ' ']
             for j, k in enumerate(self.__letters):
                 if float(self.mp_intervals[j][2]) <= float(i) <= float(self.mp_intervals[j][1]):
-                    interval_center = self.__find_mp_center_price(
+                    interval_center = IntervalCenterPrice(
                         int(self.mp_intervals[j][1].replace('.', '')), int(self.mp_intervals[j][2].replace('.', '')))
+
+                    # interval_center = self.__find_mp_center_price(
+                    #     int(self.mp_intervals[j][1].replace('.', '')), int(self.mp_intervals[j][2].replace('.', '')))
+
                     if i == interval_center[0] or i == interval_center[1]:
                         market_profile_row.append('x')
                     else:
@@ -137,7 +150,6 @@ class DrawnProfile:
         :return: profile as a list with center marks
         """
 
-        self.__profile_center = self.__find_mp_center_price(self.__day_high, self.__day_low)
         self.__market_profile[self.__mp_price_column.index(self.__profile_center[0])][2] = '-'
         self.__market_profile[self.__mp_price_column.index(self.__profile_center[1])][2] = '-'
         self.__market_profile[self.__mp_price_column.index(self.__profile_center[0])][8 + len(self.mp_intervals)] = '-'
@@ -196,7 +208,7 @@ class DrawnProfile:
 
         # Use case when there is a single center price and several POC candidates
         elif self.__profile_center[0] == self.__profile_center[1]:
-            poc = self.__choose_poc(poc_candidates, self.__profile_center[0])
+            poc = Poc(poc_candidates, self.__profile_center[0])
             for i in poc:
                 self.__market_profile[self.__mp_price_column.index(i)][-2] = \
                     self.__market_profile[self.__mp_price_column.index(i)][-zzz] = str(poc_candidates[0][2])
@@ -204,7 +216,7 @@ class DrawnProfile:
         # Use case when there are 2 center prices and several POC candidates
         else:
             for i in self.__profile_center:
-                poc = self.__choose_poc(poc_candidates, i)
+                poc = Poc(poc_candidates, i)
                 for j in poc:
                     self.__market_profile[self.__mp_price_column.index(j)][-2] = \
                         self.__market_profile[self.__mp_price_column.index(j)][-zzz] = str(poc_candidates[0][2])

@@ -46,7 +46,7 @@ class Win(tk.Canvas):
         current day profile images, stores it in the DB, puts the current day profile of the history canvas according
         to its proper positioning.
         """
-        date = month, day = str(d.today())[5:7], str(d.today())[8:10]
+        month, day = str(d.today())[5:7], str(d.today())[8:10]
 
         while self.enabled.get() == 1:
 
@@ -93,7 +93,8 @@ class Win(tk.Canvas):
             self.dr_canv.day_canvases_list[-1].collapsed_profile_image = current_day[1]
             self.dr_canv.day_canvases_list[-1].profile_image_maxprice = current_day[2]
             self.dr_canv.day_canvases_list[-1].image_y_coord = \
-                15 * int((100*float(self.dr_canv.canvas_maxprice) - 100*float(current_day[2])) / 5)
+                15 * int((int(self.dr_canv.canvas_maxprice.replace('.', '')) -
+                          int(current_day[2].replace('.', ''))) / 5)
 
             # current day is entirely within the "previous n-day range plus 1-minute-earlier current day range"
             if float(current_day[3]) >= float(self.dr_canv.canvas_minprice) \
@@ -116,7 +117,9 @@ class Win(tk.Canvas):
             if float(current_day[3]) < float(self.dr_canv.canvas_minprice) \
                     and float(current_day[2]) <= float(self.dr_canv.canvas_maxprice):
 
-                height_delta = 15*int((100*float(self.dr_canv.canvas_maxprice) - 100*float(current_day[2]))/5)
+                height_delta = \
+                    15*int((int(self.dr_canv.canvas_minprice.replace('.', '')) -
+                            int(current_day[3].replace('.', '')))/5) + 15
                 self.dr_canv.canvas_maxprice = current_day[2]
 
                 for i in self.dr_canv.day_canvases_list:
@@ -141,7 +144,9 @@ class Win(tk.Canvas):
             elif float(current_day[3]) >= float(self.dr_canv.canvas_minprice) \
                     and float(current_day[2]) > float(self.dr_canv.canvas_maxprice):
 
-                height_delta = 15*int((100*float(self.dr_canv.canvas_maxprice) - 100*float(current_day[2]))/5)
+                height_delta = \
+                    15*int((int(self.dr_canv.canvas_maxprice.replace('.', '')) -
+                            int(current_day[2].replace('.', '')))/5)
                 self.dr_canv.canvas_maxprice = current_day[2]
 
                 # if height_delta < 0:
@@ -172,15 +177,21 @@ class Win(tk.Canvas):
             elif float(current_day[3]) < float(self.dr_canv.canvas_minprice) \
                     and float(current_day[2]) > float(self.dr_canv.canvas_maxprice):
 
-                height_delta_up = 15*int((100*float(self.dr_canv.canvas_maxprice) - 100*float(current_day[2]))/5)
-                height_delta_down = 15 * int((100*float(self.dr_canv.canvas_minprice) - 100*float(current_day[3])) / 5)
+                height_delta_up = \
+                    15*int((int(self.dr_canv.canvas_maxprice.replace('.', '')) -
+                            int(current_day[2].replace('.', '')))/5)
+                height_delta_down = \
+                    15 * int((int(self.dr_canv.canvas_minprice.replace('.', '')) -
+                              int(current_day[3].replace('.', ''))) / 5)
                 height_delta = height_delta_up + height_delta_down
 
                 self.dr_canv.canvas_height = self.dr_canv.canvas_height + height_delta
 
                 for i in self.dr_canv.day_canvases_list:
                     i.height = i.winfo_reqheight() + height_delta
-                    i.image_y_coord = 15*int((100*float(i.canvas_maxprice)-100*float(i.profile_image_maxprice))/5)
+                    i.image_y_coord = \
+                        15*int((int(i.canvas_maxprice.replace('.', '')) -
+                                int(i.profile_image_maxprice.replace('.', '')))/5)
 
             time.sleep(60)
         return
